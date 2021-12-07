@@ -1,0 +1,12 @@
+lungmask @ git+https://github.com/JoHof/lungmask
+matplotlib
+numpy
+pydicom
+PyQt5
+scikit_image
+scikit-build
+cmake
+torch
+torchvision
+SimpleITK
+
