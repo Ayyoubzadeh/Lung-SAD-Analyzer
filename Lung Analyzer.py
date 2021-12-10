@@ -76,6 +76,8 @@ class MainWindow(QDialog):
         self.y_ex=0
         self.inrange_ex_voxels_p=0
         self.inrange_in_voxels_p=0
+        self.abnormal_in_voxels_p=0
+        self.abnormal_ex_voxels_p=0
 
     def redraw(self,idx):
         pixMap1=QtGui.QPixmap(self.save_image_in_actual_size(None,self.voxels_inhale_HUs[idx],"raw_in_image"+str(idx),True))
@@ -400,6 +402,10 @@ class MainWindow(QDialog):
         self.inspirationVolume=len(f_only_lungs_in)*self.voxelSize
         f_only_lungs_ex=np.array(self.only_lungs_ex).flatten()
         self.expirationVolume=len(f_only_lungs_ex)*self.voxelSize
+        
+        self.abnormal_in_voxels_p=np.count_nonzero(f_only_lungs_in[f_only_lungs_in<FIXED_INHALE])/np.count_nonzero(f_only_lungs_in)
+        self.abnormal_ex_voxels_p=np.count_nonzero(f_only_lungs_ex[f_only_lungs_ex<FIXED_EXHALE])/np.count_nonzero(f_only_lungs_ex)
+        
         normal_in_voxels=f_only_lungs_in[np.bitwise_and(f_only_lungs_in<0,f_only_lungs_in>FIXED_INHALE)]
         normal_ex_voxels=f_only_lungs_ex[np.bitwise_and(f_only_lungs_ex<0,f_only_lungs_ex>FIXED_EXHALE)]
         self.MLD_ins=mean(self.only_lungs_in)
@@ -469,9 +475,11 @@ class MainWindow(QDialog):
             newFile=True
         self.file = open(CSV_FILE_PATH, 'a')
         if newFile:
-            self.file.write("Patient Name,MLD_ins,MLD_exp,MLDR,NDE,NDI,NDEI,VDR,AVI,AT0,AT1,AT2,normal_vx_cnt,emphysema_vx_cnt,airTrapping_vx_cnt,RVC,inrange_in_voxels_p,inrange_ex_voxels_p\n")
+            self.file.write("Patient Name,P Inhale -950,P Exhale -856,MLD_ins,MLD_exp,E/I Ratio,NDE,NDI,NDEI,VDR,AVI,AT0,AT1,AT2,normal_vx_cnt,emphysema_vx_cnt,airTrapping_vx_cnt,RVC\n")
         self.file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
                 self.patientFolderName,
+                "{:.2f}".format(self.abnormal_in_voxels_p),
+                "{:.2f}".format(self.abnormal_ex_voxels_p),
                 "{:.2f}".format(self.MLD_ins),
                 "{:.2f}".format(self.MLD_exp),
                 "{:.2f}".format(self.MLDR),
@@ -486,9 +494,7 @@ class MainWindow(QDialog):
                 "{:.2f}".format(self.normal_vx_cnt/self.all_vx_cnt),
                 "{:.2f}".format(self.emphysema_vx_cnt/self.all_vx_cnt),
                 "{:.2f}".format(self.airTrapping_vx_cnt/self.all_vx_cnt),
-                "{:.2f}".format(self.rvc),
-                "{:.2f}".format(self.inrange_in_voxels_p),
-                "{:.2f}".format(self.inrange_ex_voxels_p),
+                "{:.2f}".format(self.rvc)
                 ))
         self.file.flush()
         self.file.close()
@@ -540,14 +546,17 @@ class MainWindow(QDialog):
         directories_in_curdir = [f for f in curdir.iterdir() if f.is_dir()]
         isDicom=False
         for dir in directories_in_curdir:
-            dirP = Path(dir)
-            inner_dirs=[f for f in dirP.iterdir() if f.is_dir()]
-            for i in inner_dirs:
-                if 'SR_1' in str(i.parts[-1]):
-                    isDicom=True
-                    break
-            if isDicom:
-                self.process(str(dir))
+            try:
+                dirP = Path(dir)
+                inner_dirs=[f for f in dirP.iterdir() if f.is_dir()]
+                for i in inner_dirs:
+                    if 'SR_1' in str(i.parts[-1]):
+                        isDicom=True
+                        break
+                if isDicom:
+                    self.process(str(dir))
+            except:
+                print("Skipping Bad Folder:"+dir)
                     
         
 
@@ -640,9 +649,9 @@ class MainWindow(QDialog):
         histLabel03.setText("Histograms")
         histLabel03.setFont(QFont('Comfortaa', 14))
         histLabel03.setAlignment(QtCore.Qt.AlignCenter)
-        self.btnBatch04.setText("Batch Patients Proccessing")
+        self.btnBatch04.setText("Batch Patients Processing")
         self.btnBatch04.clicked.connect(self.batch)
-        self.btnSingle14.setText("Single Patient Proccessing")
+        self.btnSingle14.setText("Single Patient Processing")
         self.btnSingle14.clicked.connect(self.single)
         MLDLabel04.setText("Mean Lung Dose (MLD)")
         MLDLabel04.setFont(QFont('Comfortaa', 14))
