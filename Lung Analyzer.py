@@ -471,8 +471,13 @@ class MainWindow(QDialog):
 
         print('MVLA_insp: {0}, MVLA_ex: {1}, AVI: {2}'.format(self.MVLA_insp,self.MVLA_exp,self.AVI))
         newFile=False
+        
+        if not os.path.exists('data'):
+            os.mkdir('data')
+
         if not os.path.isfile(CSV_FILE_PATH):
             newFile=True
+            
         self.file = open(CSV_FILE_PATH, 'a')
         if newFile:
             self.file.write("Patient Name,P Inhale -950,P Exhale -856,MLD_ins,MLD_exp,E/I Ratio,NDE,NDI,NDEI,VDR,AVI,AT0,AT1,AT2,normal_vx_cnt,emphysema_vx_cnt,airTrapping_vx_cnt,RVC\n")
