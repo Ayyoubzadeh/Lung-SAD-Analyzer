@@ -78,6 +78,9 @@ class MainWindow(QDialog):
         self.inrange_in_voxels_p=0
         self.abnormal_in_voxels_p=0
         self.abnormal_ex_voxels_p=0
+        self.ATI=0
+        self.ATI_vx_cnt=0
+        self.ATI_normal_vx_cnt=0
 
     def redraw(self,idx):
         pixMap1=QtGui.QPixmap(self.save_image_in_actual_size(None,self.voxels_inhale_HUs[idx],"raw_in_image"+str(idx),True))
@@ -94,6 +97,8 @@ class MainWindow(QDialog):
         self.pic23.setPixmap(pixMap6.scaledToHeight(PIC_HEIGHT)) 
         pixMap7=QtGui.QPixmap(self.save_prm_image_in_actual_size(self.binary_ex_filter[idx],self.voxels_ex_HUs[idx],self.voxels_registered_inhale_HUs[idx],"prm_image"+str(idx)))
         self.pic44.setPixmap(pixMap7.scaledToHeight(PIC_HEIGHT)) 
+        pixMap8=QtGui.QPixmap(self.save_ATI_map_image_in_actual_size(self.binary_ex_filter[idx],self.voxels_ex_HUs[idx],self.voxels_registered_inhale_HUs[idx],"ATI_map_image"+str(idx)))
+        self.pic45.setPixmap(pixMap8.scaledToHeight(PIC_HEIGHT)) 
 
 
     def changeSlice(self):
@@ -167,6 +172,42 @@ class MainWindow(QDialog):
         plt.close(fig)
 
 
+    def save_ATI_map_image_in_actual_size(self,mask,ex,reg_in,name):
+            if not os.path.exists('data'):
+                os.mkdir('data')
+            if not os.path.exists('data/'+self.patientFolderName):
+                os.mkdir('data/'+self.patientFolderName)
+            name='data/'+self.patientFolderName+'/'+name
+            if os.path.exists(name+'.png'):
+                return name
+            plt.ioff()
+            fig=plt.figure()
+            plt.imshow(ex, cmap='gray')
+            if mask is not None and ex is not None:
+                x=[]
+                y=[]
+                c_x=[]
+                c_y=[]
+                colors=[]
+
+                for i in range(mask.shape[0]):
+                        for j in range(mask.shape[1]):
+                            if mask[i,j]==True:
+                                y.append(i)
+                                x.append(j)
+                                if reg_in[i,j]>FIXED_INHALE and reg_in[i,j]<FIXED_EXHALE and ex[i,j]-reg_in[i,j]<60:
+                                    c_y.append(i)
+                                    c_x.append(j)   
+                                    colors.append('navy')  
+                plt.scatter(c_x, c_y, c=colors, alpha=0.25,s=1)
+            self.save_image(fig,name)
+            return name
+
+
+
+
+
+
     def save_prm_image_in_actual_size(self,mask,ex,reg_in,name):
             if not os.path.exists('data'):
                 os.mkdir('data')
@@ -199,6 +240,10 @@ class MainWindow(QDialog):
                                     c_y.append(i)
                                     c_x.append(j)   
                                     colors.append('blue')
+                                elif reg_in[i,j]>FIXED_INHALE and reg_in[i,j]<FIXED_EXHALE and ex[i,j]-reg_in[i,j]<60:
+                                    c_y.append(i)
+                                    c_x.append(j)   
+                                    colors.append('navy')  
                                 else:
                                     c_y.append(i)
                                     c_x.append(j)   
@@ -336,7 +381,7 @@ class MainWindow(QDialog):
         elastixImageFilter.Execute()
         insp_registered=elastixImageFilter.GetResultImage()
 
-        #sitk.PrintParameterMap(elastixImageFilter.GetTransformParameterMap()[0])
+        sitk.PrintParameterMap(elastixImageFilter.GetTransformParameterMap()[0])
         #image3=sitk.Transformix(image,elastixImageFilter.GetTransformParameterMap(),True)
 
         # Get the current working directory:
@@ -458,8 +503,12 @@ class MainWindow(QDialog):
                 self.airTrapping_vx_cnt=self.airTrapping_vx_cnt+1
             else:
                 self.normal_vx_cnt=self.normal_vx_cnt+1
+            if self.voxels_registered_inhale_HUs[x,y,z]>FIXED_INHALE and self.voxels_registered_inhale_HUs[x,y,z]<FIXED_EXHALE and self.voxels_ex_HUs[x,y,z]-self.voxels_registered_inhale_HUs[x,y,z]<60:
+                self.ATI_vx_cnt=self.ATI_vx_cnt+1
+            elif self.voxels_registered_inhale_HUs[x,y,z]>FIXED_INHALE and self.voxels_registered_inhale_HUs[x,y,z]<FIXED_EXHALE:
+                self.ATI_normal_vx_cnt=self.ATI_normal_vx_cnt+1
 
-
+        self.ATI=self.ATI_vx_cnt/(self.ATI_vx_cnt+self.ATI_normal_vx_cnt)
         self.all_vx_cnt=self.normal_vx_cnt+self.emphysema_vx_cnt+self.airTrapping_vx_cnt
         
         print('NORMAL VX: {0}, EMPHYSEMA VX: {1}, AIR TRAPPING VX: {2}'.format(self.normal_vx_cnt/self.all_vx_cnt,self.emphysema_vx_cnt/self.all_vx_cnt,self.airTrapping_vx_cnt/self.all_vx_cnt))
@@ -480,8 +529,8 @@ class MainWindow(QDialog):
             
         self.file = open(CSV_FILE_PATH, 'a')
         if newFile:
-            self.file.write("Patient Name,P Inhale -950,P Exhale -856,MLD_ins,MLD_exp,E/I Ratio,NDE,NDI,NDEI,VDR,AVI,AT0,AT1,AT2,normal_vx_cnt,emphysema_vx_cnt,airTrapping_vx_cnt,RVC\n")
-        self.file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+            self.file.write("Patient Name,P Inhale -950,P Exhale -856,MLD_ins,MLD_exp,E/I Ratio,NDE,NDI,NDEI,VDR,AVI,AT0,AT1,AT2,normal_vx_cnt,emphysema_vx_cnt,airTrapping_vx_cnt,RVC,ATI\n")
+        self.file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
                 self.patientFolderName,
                 "{:.2f}".format(self.abnormal_in_voxels_p),
                 "{:.2f}".format(self.abnormal_ex_voxels_p),
@@ -499,7 +548,8 @@ class MainWindow(QDialog):
                 "{:.2f}".format(self.normal_vx_cnt/self.all_vx_cnt),
                 "{:.2f}".format(self.emphysema_vx_cnt/self.all_vx_cnt),
                 "{:.2f}".format(self.airTrapping_vx_cnt/self.all_vx_cnt),
-                "{:.2f}".format(self.rvc)
+                "{:.2f}".format(self.rvc),
+                "{:.2f}".format(self.ATI)
                 ))
         self.file.flush()
         self.file.close()
@@ -581,6 +631,7 @@ class MainWindow(QDialog):
             self.save_histogram(self.voxels_inhale_HUs[idx],"histogram_in"+str(idx))
             self.save_histogram(self.voxels_ex_HUs[idx],"histogram_ex_"+str(idx))
             self.save_prm_image_in_actual_size(self.binary_ex_filter[idx],self.voxels_ex_HUs[idx],self.voxels_registered_inhale_HUs[idx],"prm_image"+str(idx))
+            self.save_ATI_map_image_in_actual_size(self.binary_ex_filter[idx],self.voxels_ex_HUs[idx],self.voxels_registered_inhale_HUs[idx],"ATI_map_image"+str(idx))
             print('preloading files',idx)    
 
       
@@ -613,17 +664,22 @@ class MainWindow(QDialog):
         self.NDEValLabel15.setStyleSheet("background-color: #fef8dd")
         self.ATValLabel15= QLabel(self)
         self.ATValLabel15.setStyleSheet("background-color: #f7d8ba")
+
+        self.ATIMap35= QLabel(self)
+        self.ATIMap35.setStyleSheet("background-color: #fef8dd")
+
         expirationLabel20 = QLabel(self)
         self.pic21 = QLabel(self)
         self.pic22 = QLabel(self)
         self.pic23 = QLabel(self)
         self.pic44 = QLabel(self)
+        self.pic45= QLabel(self)
         overallLabel30 = QLabel(self)
         parent_layout.addWidget(self.slider00, 0, 0)
         parent_layout.addWidget(self.btnHist01,0,1)
         parent_layout.addWidget(self.btn3D02,0,2)
         parent_layout.addWidget(histLabel03,0,3)
-        parent_layout.addWidget(self.btnBatch04,3,4)
+        
         parent_layout.addWidget(self.btnSingle14,2,4)
         parent_layout.addWidget(inspirationLabel10, 1, 0)
         parent_layout.addWidget(self.pic11, 1, 1)
@@ -636,11 +692,15 @@ class MainWindow(QDialog):
         parent_layout.addWidget(MLDLabel04,3,1)
         parent_layout.addWidget(NDE05,3,2)
         parent_layout.addWidget(AT06,3,3)
+        parent_layout.addWidget(self.btnBatch04,3,4)
+        parent_layout.addWidget(self.ATIMap35,3,5)
+
         parent_layout.addWidget(overallLabel30, 4, 0)
         parent_layout.addWidget(self.MLDValLabel14,4,1)
         parent_layout.addWidget(self.NDEValLabel15,4,2)
         parent_layout.addWidget(self.ATValLabel15,4,3)    
         parent_layout.addWidget(self.pic44,4,4)     
+        parent_layout.addWidget(self.pic45,4,5)     
         self.slider00.setFocusPolicy(Qt.StrongFocus)
         self.slider00.setTickPosition(QSlider.TicksBothSides)
         self.slider00.setMinimum(0)
@@ -682,6 +742,8 @@ class MainWindow(QDialog):
         overallLabel30.setText("Overall")
         overallLabel30.setFont(QFont('Comfortaa', 24))
         overallLabel30.setStyleSheet("background-color: #f7d8ba")
+        self.ATIMap35.setText("ATI Map")
+        self.ATIMap35.setFont(QFont('Comfortaa', 14))
         self.setLayout(parent_layout)
         self.setStyleSheet("background-color:white")
 
