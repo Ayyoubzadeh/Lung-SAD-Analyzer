@@ -337,15 +337,16 @@ class MainWindow(QDialog):
                 continue
             slices = [s for s in slices if 'SliceLocation' in s]
             slices.sort(key = lambda x: int(x.InstanceNumber))
-            if 'INSP' in slices[0].ImageComments.upper() or 'INSP' in slices[0].SeriesDescription.upper():
+            if 'INS' in slices[0].ImageComments.upper() or 'INS' in slices[0].SeriesDescription.upper():
+                RefDs = slices[0]
                 self.inspiration.append({'path':currentPath,'filesCount':len(slices)})
                 self.inspiration.sort(key = lambda x: int(x['filesCount']),reverse = True )
-                RefDs = slices[0]
                 ConstPixelDims = (int(RefDs.Rows), int(RefDs.Columns), len(slices))
                 self.voxelSize = float(RefDs.PixelSpacing[0])* float(RefDs.PixelSpacing[1])* float(RefDs.SliceThickness)
                 print(self.voxelSize)
 
             elif 'EXP' in slices[0].ImageComments.upper() or 'EXP' in slices[0].SeriesDescription.upper():
+                RefDs = slices[0]
                 self.expiration.append({'path':currentPath,'filesCount':len(slices)})
                 self.expiration.sort(key = lambda x: int(x['filesCount']),reverse = True )
                 ConstPixelDims = (int(RefDs.Rows), int(RefDs.Columns), len(slices))
@@ -679,8 +680,9 @@ class MainWindow(QDialog):
         parent_layout.addWidget(self.btnHist01,0,1)
         parent_layout.addWidget(self.btn3D02,0,2)
         parent_layout.addWidget(histLabel03,0,3)
-        
-        parent_layout.addWidget(self.btnSingle14,2,4)
+        parent_layout.addWidget(self.btnSingle14,0,4)
+        parent_layout.addWidget(self.btnBatch04,0,5)
+
         parent_layout.addWidget(inspirationLabel10, 1, 0)
         parent_layout.addWidget(self.pic11, 1, 1)
         parent_layout.addWidget(self.pic12, 1, 2)
@@ -692,7 +694,7 @@ class MainWindow(QDialog):
         parent_layout.addWidget(MLDLabel04,3,1)
         parent_layout.addWidget(NDE05,3,2)
         parent_layout.addWidget(AT06,3,3)
-        parent_layout.addWidget(self.btnBatch04,3,4)
+        
         parent_layout.addWidget(self.ATIMap35,3,5)
 
         parent_layout.addWidget(overallLabel30, 4, 0)
