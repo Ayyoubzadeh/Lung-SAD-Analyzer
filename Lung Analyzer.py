@@ -337,21 +337,25 @@ class MainWindow(QDialog):
                 continue
             slices = [s for s in slices if 'SliceLocation' in s]
             slices.sort(key = lambda x: int(x.InstanceNumber))
-            if 'INS' in slices[0].ImageComments.upper() or 'INS' in slices[0].SeriesDescription.upper():
+            if 'INS' in slices[0].ImageComments.upper() or 'INS' in slices[0].SeriesDescription.upper() or '-INS' in str(d).upper():
                 RefDs = slices[0]
                 self.inspiration.append({'path':currentPath,'filesCount':len(slices)})
                 self.inspiration.sort(key = lambda x: int(x['filesCount']),reverse = True )
                 ConstPixelDims = (int(RefDs.Rows), int(RefDs.Columns), len(slices))
                 self.voxelSize = float(RefDs.PixelSpacing[0])* float(RefDs.PixelSpacing[1])* float(RefDs.SliceThickness)
                 print(self.voxelSize)
+                if slices[0].PatientAge:
+                    self.age=slices[0].PatientAge
 
-            elif 'EXP' in slices[0].ImageComments.upper() or 'EXP' in slices[0].SeriesDescription.upper():
+            elif 'EXP' in slices[0].ImageComments.upper() or 'EXP' in slices[0].SeriesDescription.upper() or '-EXP' in str(d).upper():
                 RefDs = slices[0]
                 self.expiration.append({'path':currentPath,'filesCount':len(slices)})
                 self.expiration.sort(key = lambda x: int(x['filesCount']),reverse = True )
                 ConstPixelDims = (int(RefDs.Rows), int(RefDs.Columns), len(slices))
                 self.voxelSize = float(RefDs.PixelSpacing[0])* float(RefDs.PixelSpacing[1])* float(RefDs.SliceThickness)
                 print(self.voxelSize)
+                if slices[0].PatientAge:
+                    self.age=slices[0].PatientAge
 
         for i, j in np.ndindex(len(self.inspiration), len(self.expiration)):
             if self.inspiration[i]['filesCount']>=self.expiration[j]['filesCount']-INSPIRATION_AND_EXPIRATION_SLICES_MAX_DIFF_COUNT and self.inspiration[i]['filesCount']<=self.expiration[j]['filesCount']+INSPIRATION_AND_EXPIRATION_SLICES_MAX_DIFF_COUNT:
@@ -530,8 +534,8 @@ class MainWindow(QDialog):
             
         self.file = open(CSV_FILE_PATH, 'a')
         if newFile:
-            self.file.write("Patient Name,P Inhale -950,P Exhale -856,MLD_ins,MLD_exp,E/I Ratio,NDE,NDI,NDEI,VDR,AVI,AT0,AT1,AT2,normal_vx_cnt,emphysema_vx_cnt,airTrapping_vx_cnt,RVC,ATI\n")
-        self.file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+            self.file.write("Patient Name,P Inhale -950,P Exhale -856,MLD_ins,MLD_exp,E/I Ratio,NDE,NDI,NDEI,VDR,AVI,AT0,AT1,AT2,normal_vx_cnt,emphysema_vx_cnt,airTrapping_vx_cnt,RVC,ATI,Age\n")
+        self.file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
                 self.patientFolderName,
                 "{:.2f}".format(self.abnormal_in_voxels_p),
                 "{:.2f}".format(self.abnormal_ex_voxels_p),
@@ -550,7 +554,8 @@ class MainWindow(QDialog):
                 "{:.2f}".format(self.emphysema_vx_cnt/self.all_vx_cnt),
                 "{:.2f}".format(self.airTrapping_vx_cnt/self.all_vx_cnt),
                 "{:.2f}".format(self.rvc),
-                "{:.2f}".format(self.ATI)
+                "{:.2f}".format(self.ATI),
+                str(self.age)
                 ))
         self.file.flush()
         self.file.close()
